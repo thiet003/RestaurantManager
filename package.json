@@ -1,0 +1,14 @@
+{
+  "name": "restaurantmanager",
+  "version": "1.0.0",
+  "description": "Một ứng dụng backend NodeJS cho việc quản lý nhà hàng tiện lợi hơn",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
