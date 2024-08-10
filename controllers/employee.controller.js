@@ -1,0 +1,84 @@
+const pool = require('../databases/connect_to_postgre');
+const bcrypt = require('bcrypt');
+const employeeValidation = require('../configs/validations/employee.validation');
+const { signAccessToken } = require('../services/auth/AccessToken');
+const createEmployee = async (req, res) => {
+    const { username, password, name, phone, role, position, hire_date } = req.body;
+
+    // Validate data
+    const data = { username, password, name, phone, role, position, hire_date };
+    const { error } = employeeValidation(data);
+    if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+    }
+
+    try {
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Check if username already exists
+        const checkUsername = {
+            text: 'SELECT * FROM employees WHERE username = $1',
+            values: [username]
+        };
+        
+        const usernameResult = await pool.query(checkUsername);
+
+        if (usernameResult.rows.length > 0) {
+            return res.status(400).json({ message: 'Username already exists' });
+        }
+
+        const avatar = 'https://cellphones.com.vn/sforum/wp-content/uploads/2023/10/avatar-trang-4.jpg';
+
+        // Add to database
+        const query = {
+            text: 'INSERT INTO employees(username, password_hash, name, phone, role, position, hire_date, avatar) VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
+            values: [username, hashedPassword, name, phone, role, position, hire_date, avatar]
+        };
+        
+        await pool.query(query);
+
+        return res.status(201).json({ message: 'Employee created successfully' });
+    } catch (err) {
+        return res.status(400).json({ message: 'Error in database operation' });
+    }
+};
+
+
+const loginEmployee = async (req, res) => {
+    const {username, password} = req.body;
+    // Find employee
+    const query = {
+        text: 'SELECT * FROM employees WHERE username = $1',
+        values: [username]
+    };
+    const result = await pool.query(query);
+    if (result.rows.length === 0) {
+        return res.status(400).json({ message: 'Username or password is incorrect' });
+    }
+    // Check password
+    const employee = result.rows[0];
+    const validPassword = await bcrypt.compare(password, employee.password_hash);
+    if (!validPassword) {
+        return res.status(400).json({ message: 'Username or password is incorrect' });
+    }
+    // Return token
+    const payload = {
+        id: employee.id,
+        username: employee.username,
+        role: employee.role
+    };
+    const accessToken = await signAccessToken(payload);
+    return res.status(200).json({
+        status: 200,
+        message: 'Login successfully',
+        name: employee.name,
+        accessToken: accessToken
+    });
+};
+
+module.exports = {
+    createEmployee,
+    loginEmployee
+};
