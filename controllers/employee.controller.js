@@ -2,11 +2,36 @@ const pool = require('../databases/connect_to_postgre');
 const bcrypt = require('bcrypt');
 const employeeValidation = require('../configs/validations/employee.validation');
 const { signAccessToken } = require('../services/auth/AccessToken');
+
+const listEmployees = async (req, res) => {
+    try {
+        let page = req.query.page || 1;
+        let limit = req.query.limit || 10;
+        let offset = (page - 1) * limit;
+        let keyword = req.query.keyword || '';
+        const countQuery = {
+            text: 'SELECT COUNT(*) FROM employees WHERE name ILIKE $1 AND deleted = $2',
+            values: ['%' + keyword + '%', false]
+        };
+        const countResult = await pool.query(countQuery);
+        const totalPage = Math.ceil(countResult.rows[0].count / limit);
+
+        const mainQuery = {
+            text: 'SELECT employee_id, name, username, phone, role, position, hire_date, avatar FROM employees WHERE name ILIKE $1 AND deleted = $2 LIMIT $3 OFFSET $4',
+            values: ['%' + keyword + '%', false, limit, offset]
+        }
+        const result = await pool.query(mainQuery);
+        return res.status(200).json({ employees: result.rows, totalPage });
+    } catch (err) {
+        return res.status(400).json({ message: err.message });
+    }
+}
+
 const createEmployee = async (req, res) => {
     const { username, password, name, phone, role, position, hire_date } = req.body;
 
     // Validate data
-    const data = { username, password, name, phone, role, position, hire_date };
+    const data = { username, password, name, phone, role, position, hire_date};
     const { error } = employeeValidation(data);
     if (error) {
         return res.status(400).json({ message: error.details[0].message });
@@ -74,11 +99,29 @@ const loginEmployee = async (req, res) => {
         status: 200,
         message: 'Login successfully',
         name: employee.name,
+        role: employee.role,
         accessToken: accessToken
     });
 };
 
+const deleteEmployee = async (req, res) => {
+    try{
+        const id = req.params.id;
+        const query = {
+            text: 'UPDATE employees SET deleted = $1 WHERE employee_id = $2',
+            values: [true, id]
+        };
+        await pool.query(query);
+        return res.status(200).json({ message: 'Employee deleted successfully' });
+    }catch(err){
+        console.log(err.message);
+        
+        return res.status(400).json({ message: err.message });
+    }
+};
 module.exports = {
+    listEmployees,
     createEmployee,
-    loginEmployee
+    loginEmployee,
+    deleteEmployee
 };
