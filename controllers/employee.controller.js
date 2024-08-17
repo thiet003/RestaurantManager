@@ -115,13 +115,46 @@ const deleteEmployee = async (req, res) => {
         return res.status(200).json({ message: 'Employee deleted successfully' });
     }catch(err){
         console.log(err.message);
-        
         return res.status(400).json({ message: err.message });
     }
 };
+const updateEmployee = async (req, res) => {
+    try{
+        const id = req.params.id;
+        const {role, position} = req.body;
+        const query = {
+            text: 'UPDATE employees SET role = $1, position = $2 WHERE employee_id = $3',
+            values: [role, position, id]
+        };
+        await pool.query(query);
+        return res.status(200).json({ message: 'Employee updated successfully' });
+    }
+    catch(err){
+        console.log(err.message);
+        return res.status(400).json({ message: err.message });
+    }
+};
+
+const getEmployeeById = async (req, res) => {
+    try{
+        const id = req.params.id;
+        const query = {
+            text: 'SELECT * FROM employees WHERE employee_id = $1',
+            values: [id]
+        };
+        const result = await pool.query(query);
+        return res.status(200).json(result.rows[0]);
+    }catch(err){
+        console.log(err.message);
+        return res.status(400).json({ message: err.message });
+    }
+}
+
 module.exports = {
     listEmployees,
     createEmployee,
     loginEmployee,
-    deleteEmployee
+    deleteEmployee,
+    updateEmployee,
+    getEmployeeById
 };
