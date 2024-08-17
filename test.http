@@ -2,8 +2,8 @@
 GET http://localhost:8000/api/v1/abc
 
 ###
-GET http://localhost:8000/api/v1/dishes
-authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluMSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcyMzI4MjQxOSwiZXhwIjoxNzIzMjg2MDE5fQ.LydDvl209m9aCZLCo9CquSGCY42F_rdsUmMB0a0c32Y
+GET http://localhost:8000/api/v1/employees/infor
+authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwidXNlcm5hbWUiOiJhZG1pbjEiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3MjM5MTQzNzcsImV4cCI6MTcyMzkxNDQzN30.XRGi5fy17WUjW3-7MMD-a3VpVE07HUdaG3NgRRP470U
 ###
 POST http://localhost:8000/api/v1/employees/create
 Content-Type: application/json
@@ -26,6 +26,16 @@ Content-Type: application/json
 {
     "username": "admin1",
     "password": "Admin123"
+}
+
+###
+PATCH http://localhost:8000/api/v1/employees/change-password
+authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwidXNlcm5hbWUiOiJhZG1pbjEiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3MjM5MTY4NDQsImV4cCI6MTcyMzkyMDQ0NH0.jcrqCMeliuUZ0uNXkRbZkLI2mshNO6EustWNi9KIfp4
+Content-Type: application/json
+
+{
+    "oldPassword": "Admin1234",
+    "newPassword": "Admin123"
 }
 
 ###

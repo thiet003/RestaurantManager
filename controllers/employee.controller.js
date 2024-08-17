@@ -2,6 +2,7 @@ const pool = require('../databases/connect_to_postgre');
 const bcrypt = require('bcrypt');
 const employeeValidation = require('../configs/validations/employee.validation');
 const { signAccessToken } = require('../services/auth/AccessToken');
+const passwordValidation = require('../configs/validations/password.validation');
 
 const listEmployees = async (req, res) => {
     try {
@@ -82,6 +83,10 @@ const loginEmployee = async (req, res) => {
     if (result.rows.length === 0) {
         return res.status(400).json({ message: 'Username or password is incorrect' });
     }
+    // Check deleted
+    if (result.rows[0].deleted) {
+        return res.status(400).json({ message: 'Employee has been deleted' });
+    }
     // Check password
     const employee = result.rows[0];
     const validPassword = await bcrypt.compare(password, employee.password_hash);
@@ -90,7 +95,7 @@ const loginEmployee = async (req, res) => {
     }
     // Return token
     const payload = {
-        id: employee.id,
+        id: employee.employee_id,
         username: employee.username,
         role: employee.role
     };
@@ -149,12 +154,63 @@ const getEmployeeById = async (req, res) => {
         return res.status(400).json({ message: err.message });
     }
 }
+const getInformation = async (req, res) => {
+    const id = req.user.id;
+    const query = {
+        text: 'SELECT username, name, phone, role, position, hire_date, avatar FROM employees WHERE employee_id = $1',
+        values: [id]
+    };
+    try{
+        const result = await pool.query(query);
+        return res.status(200).json(result.rows[0]);
+    }
+    catch(err){
+        return res.status(400).json({ message: err.message });
+    }
+}
 
+const changePassword = async (req, res) => {
+    const id = req.user.id;
+    const {oldPassword, newPassword} = req.body;
+    const data = {newPassword};
+    const {error} = passwordValidation(data);
+    if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+    }
+    const query = {
+        text: 'SELECT * FROM employees WHERE employee_id = $1',
+        values: [id]
+    };
+    try{
+        const result = await pool.query(query);
+        const employee = result.rows[0];
+        const validPassword = await bcrypt.compare(oldPassword, employee.password_hash);
+        if (!validPassword) {
+            return res.status(400).json({ message: 'Old password is incorrect' });
+        }
+        if (oldPassword === newPassword) {
+            return res.status(400).json({ message: 'New password must be different from old password' });
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        const updateQuery = {
+            text: 'UPDATE employees SET password_hash = $1 WHERE employee_id = $2',
+            values: [hashedPassword, id]
+        };
+        await pool.query(updateQuery);
+        return res.status(200).json({ message: 'Password changed successfully' });
+    }
+    catch(err){
+        return res.status(400).json({ message: err.message });
+    }
+}
 module.exports = {
     listEmployees,
     createEmployee,
     loginEmployee,
     deleteEmployee,
     updateEmployee,
-    getEmployeeById
+    getEmployeeById,
+    getInformation,
+    changePassword
 };
